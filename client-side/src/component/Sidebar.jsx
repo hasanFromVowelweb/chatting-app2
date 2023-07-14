@@ -12,7 +12,7 @@ import ReactDOMServer from 'react-dom/server';
 import ReactDOM from 'react-dom'
 
 
-export default function Sidebar({ setUserName, setRoomID, setChatName, privateNewMsg }) {
+export default function Sidebar({ setUserName, setRoomID, setChatIconClicked, setChatName, privateNewMsg }) {
 
   ///////////////////login authentication////////////////////
   const { loginWithRedirect } = useAuth0();
@@ -29,8 +29,8 @@ export default function Sidebar({ setUserName, setRoomID, setChatName, privateNe
 
   function handleClickChat(roomId, chatName) {
     console.log('clicked a chat sidebar')
-    setRoomID(roomId)
-    setChatName(chatName)
+    // setRoomID(roomId)
+    // setChatName(chatName)
   }
 
 
@@ -57,13 +57,6 @@ export default function Sidebar({ setUserName, setRoomID, setChatName, privateNe
 
 
   // }, [privateNewMsg]);
-
-  useEffect(() => {
-
-    privateNewMsg
-    console.log('privateNewMsg', privateNewMsg)
-
-  }, [privateNewMsg]);
 
 
 
@@ -122,7 +115,7 @@ export default function Sidebar({ setUserName, setRoomID, setChatName, privateNe
           <IconButton>
             <GroupsIcon fontSize='medium' />
           </IconButton>
-          <IconButton>
+          <IconButton onClick={() => { setChatIconClicked(true) }}>
             <MessageIcon />
           </IconButton>
           <IconButton>
@@ -138,7 +131,8 @@ export default function Sidebar({ setUserName, setRoomID, setChatName, privateNe
         </div>
       </div>
       <div id='newPrivateChats' className="sidebarChats">
-        {Array.isArray(privateNewMsg) &&
+
+        {/* {Array.isArray(privateNewMsg) &&
           privateNewMsg.map((item, i) => {
             console.log('item....', item);
             return (
@@ -146,6 +140,19 @@ export default function Sidebar({ setUserName, setRoomID, setChatName, privateNe
                 onClick={() => handleClickChat(item?.name, item?.name)}
                 groupName={item?.name}
                 lastmsg={item?.message?.message}
+              />
+            );
+          })
+        } */}
+
+        {Array.isArray(privateNewMsg) &&
+          privateNewMsg.map((item, i) => {
+            console.log('item....', item);
+            return (
+              <SidebarChat
+                onClick={() => handleClickChat()}
+                groupName={item?.recipient}
+                lastmsg={'this is the last message'}
               />
             );
           })

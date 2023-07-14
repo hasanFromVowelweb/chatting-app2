@@ -18,6 +18,7 @@ function App() {
   const [open, setOpen] = React.useState(true);
   const handleClose = () => setOpen(false);
   const [privateNewMsg, setPrivateNewMsg] = useState('')
+  const [ischatIconClicked, setChatIconClicked] = useState(false)
 
 
   const style = {
@@ -36,8 +37,7 @@ function App() {
   ///////////////////login authentication///////////////////
 
   const { user, isAuthenticated, isLoading } = useAuth0();
-  const { loginWithRedirect } = useAuth0();
-  privateNewMsg && console.log('privateNewMsg.......', privateNewMsg)
+  const { loginWithRedirect } = useAuth0()
 
   return (
     <>
@@ -50,8 +50,8 @@ function App() {
               Wait a moment🥱....
             </Typography>
           </Box> :
-          isAuthenticated ? <><Sidebar setUserName={setUserName} privateNewMsg={privateNewMsg} setRoomID={setRoomID} setChatName={setChatName} />
-            <Chat setPrivateNewMsg={setPrivateNewMsg} userName={userName} roomID={roomID} chatName={chatName} /></> :
+          isAuthenticated ? <><Sidebar setChatIconClicked={setChatIconClicked} setUserName={setUserName} privateNewMsg={privateNewMsg} setRoomID={setRoomID} setChatName={setChatName} />
+            <Chat setChatIconClicked={setChatIconClicked} ischatIconClicked={ischatIconClicked} setPrivateNewMsg={setPrivateNewMsg} userName={userName} roomID={roomID} chatName={chatName} /></> :
           <>
             <Modal
               open={open}

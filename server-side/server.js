@@ -20,6 +20,8 @@ const users = new Map()
 
 const rooms = new Map();
 
+const privateRooms = new Map();
+
 const io = new Server(httpServer, {
     cors: {
         origin: "http://localhost:5173"
@@ -46,9 +48,17 @@ const io = new Server(httpServer, {
 
 // });
 
+function generateRoomID() {
+    const min = 10000;
+    const max = 99999;
+    const roomID = Math.floor(Math.random() * (max - min + 1)) + min;
+    return roomID.toString();
+}
+
+
 io.on("connection", (socket) => {
     socket.on('new-user-online', name => {
-        console.log('new-user.....', name);
+        // console.log('new-user.....', name);
         users[socket.id] = name;
         socket.broadcast.emit('user-online', name);
     });
@@ -60,36 +70,56 @@ io.on("connection", (socket) => {
         socket.to(roomId).emit('userJoinedRoom', { roomId, userId: socket.id });
     });
 
+    ///////////////// create new room ///////////////////
+    socket.on('createRoomPrivate', (data) => {
+        console.log(' data.userName', data.userName)
+        console.log('data.recipientName', data.recipientName)
+        const privateRoomID = generateRoomID(); // Generate a unique room ID
+        const users = [data.userName, data.recipientName];
+
+        // Store the room ID and users in the activeRooms map
+        privateRooms?.set(privateRoomID, users);
+        // Join the room
+        privateRoomID && socket.join(privateRoomID);
+
+        // Emit the roomID to both users
+        socket.emit('createdRoomPrivate', { privateRoomID, sender: data.userName, recipient: data.recipientName });
+
+        socket.to(privateRoomID).emit('joinedRoomPrivate', { privateRoomID, sender: data.userName, recipient: data.recipientName });
+        console.log('privateRoomID', privateRoomID)
+    });
+
 
 
     socket.on('send', message => {
-        console.log('users........', users);
+        // console.log('users........', users);
 
         const roomId = rooms.get(socket.id);
 
         const timestamp = new Date().toUTCString();
         console.log('messageV1.......', message)
         const recipientName = message.recipientName;
-        console.log(users[recipientName])
-        console.log('recipientName on send......', recipientName)
+        // console.log(users[recipientName])
+        // console.log('recipientName on send......', recipientName)
         if (recipientName != undefined) {
-            console.log('recipientName found!')
+            // console.log('recipientName found!')
             let recipientId = ''
             Object.entries(users).forEach(([key, value]) => {
-                console.log('Key:', key, 'Value:', value);
+                // console.log('Key:', key, 'Value:', value);
                 if (value.includes(recipientName)) {
-                    console.log('recepientName matched...', recipientName)
+                    // console.log('recepientName matched...', recipientName)
                     recipientId = key
                     io.to(recipientId).emit('receive', { message, name: users[socket.id], time: timestamp, userId: message.recipientName, type: 'one-to-one' });
 
                 }
                 else {
-                    console.log('recepientName not matched...', recipientName)
+                    // console.log('recepientName not matched...', recipientName)
                     // socket.to(roomId).emit('receive', { error: 'user is not register or login' });
                 }
             });
+
         } else {
-            console.log('recipientName not found!')
+            // console.log('recipientName not found!')
             socket.to(roomId).emit('receive', { message, name: users[socket.id], time: timestamp });
 
         }
@@ -99,9 +129,9 @@ io.on("connection", (socket) => {
 
     socket.on('disconnect', () => {
         const roomId = rooms.get(socket.id);
-        console.log('users[socket.id]', users[socket.id])
-        console.log('socket.id........', socket.id)
-        console.log('roomId......', roomId)
+        // console.log('users[socket.id]', users[socket.id])
+        // console.log('socket.id........', socket.id)
+        // console.log('roomId......', roomId)
         if (roomId) {
             socket.to(roomId).emit('userLeftRoom', { name: users[socket.id], roomId, userId: socket.id });
             socket.leave(roomId);
@@ -176,14 +206,6 @@ io.on("connection", (socket) => {
 
 //   });
 // });
-
-
-
-
-
-
-
-
 
 
 
