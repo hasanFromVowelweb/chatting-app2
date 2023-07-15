@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useContext } from 'react'
 import '../assets/sidebar.css'
 import { Avatar, IconButton, Popper, Box, Button, Menu, MenuItem } from '@mui/material';
 import DonutLargeIcon from '@mui/icons-material/DonutLarge';
@@ -10,9 +10,12 @@ import GroupsIcon from '@mui/icons-material/Groups';
 import { useAuth0 } from "@auth0/auth0-react";
 import ReactDOMServer from 'react-dom/server';
 import ReactDOM from 'react-dom'
+import DataContext from '../DataContext';
 
 
-export default function Sidebar({ setUserName, setRoomID, setChatIconClicked, setChatName, privateNewMsg }) {
+export default function Sidebar({ setUserName, setRoomID, setChatIconClicked, setChatName }) {
+
+  const { privateNewMsg, setPrivateChatData, privateNewMsgRec } = useContext(DataContext);
 
   ///////////////////login authentication////////////////////
   const { loginWithRedirect } = useAuth0();
@@ -29,10 +32,31 @@ export default function Sidebar({ setUserName, setRoomID, setChatIconClicked, se
 
   function handleClickChat(roomId, chatName) {
     console.log('clicked a chat sidebar')
-    // setRoomID(roomId)
-    // setChatName(chatName)
+    setRoomID(roomId)
+    setChatName(chatName)
   }
 
+
+  function handlePrivateChatSent(privateRoomID, sender,recipient) {
+    console.log('privateRoomID', privateRoomID)
+    console.log('sender', sender)
+    console.log('recipient', recipient)
+    setRoomID(privateRoomID)
+    setChatName(recipient)
+    // setPrivateChatData({privateRoomID,recipient})
+
+  }
+
+
+  function handlePrivateChatReceive(privateRoomID, sender,recipient) {
+    console.log('privateRoomID', privateRoomID)
+    console.log('sender', sender)
+    console.log('recipient', recipient)
+    setRoomID(privateRoomID)
+    setChatName(sender)
+    // setPrivateChatData({privateRoomID,sender})
+
+  }
 
   ///////////////new message recieved/////////////////
 
@@ -131,8 +155,8 @@ export default function Sidebar({ setUserName, setRoomID, setChatIconClicked, se
         </div>
       </div>
       <div id='newPrivateChats' className="sidebarChats">
-
-        {/* {Array.isArray(privateNewMsg) &&
+        {/*           
+        {Array.isArray(privateNewMsg) &&
           privateNewMsg.map((item, i) => {
             console.log('item....', item);
             return (
@@ -150,8 +174,21 @@ export default function Sidebar({ setUserName, setRoomID, setChatIconClicked, se
             console.log('item....', item);
             return (
               <SidebarChat
-                onClick={() => handleClickChat()}
+                onClick={() => handlePrivateChatSent( item?.privateRoomID, item?.sender,item?.recipient)}
                 groupName={item?.recipient}
+                lastmsg={'this is the last message'}
+              />
+            );
+          })
+        }
+
+        {Array.isArray(privateNewMsgRec) &&
+          privateNewMsgRec.map((item, i) => {
+            console.log('item....', item);
+            return (
+              <SidebarChat
+                onClick={() => handlePrivateChatReceive( item?.privateRoomID, item?.sender,item?.recipient)}
+                groupName={item?.sender}
                 lastmsg={'this is the last message'}
               />
             );

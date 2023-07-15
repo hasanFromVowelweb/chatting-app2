@@ -29,24 +29,14 @@ const io = new Server(httpServer, {
 });
 
 
-// io.on("connection", (socket) => {
-//     socket.on('new-user-online', name => {
-//         console.log('new-user.....', name)
-//         users[socket.id] = name;
-//         socket.broadcast.emit('user-online', name)
-//     })
-
-//     socket.on('send', message => {
-//         const timestamp = new Date().toUTCString()
-//         socket.broadcast.emit('receive', { message: message, name: users[socket.id], time: timestamp })
-//     })
-
-//     socket.on('disconnect', message => {
-//         socket.broadcast.emit('left', users[socket.id])
-//         delete users[socket.id]
-//     })
-
-// });
+function findExistingPrivateRoom(userName, recipientName) {
+    for (const [roomID, users] of privateRooms) {
+        if (users.includes(userName) && users.includes(recipientName)) {
+            return roomID;
+        }
+    }
+    return null;
+}
 
 function generateRoomID() {
     const min = 10000;
@@ -60,6 +50,8 @@ io.on("connection", (socket) => {
     socket.on('new-user-online', name => {
         // console.log('new-user.....', name);
         users[socket.id] = name;
+        // console.log('users[socket.id]', users[socket.id])
+        // console.log('users.........', users)
         socket.broadcast.emit('user-online', name);
     });
 
@@ -67,43 +59,94 @@ io.on("connection", (socket) => {
         socket.join(roomId);
         rooms.set(socket.id, roomId);
         socket.emit('roomJoined', roomId);
+        console.log('roomID.....', roomId)
         socket.to(roomId).emit('userJoinedRoom', { roomId, userId: socket.id });
     });
 
     ///////////////// create new room ///////////////////
+    // socket.on('createRoomPrivate', (data) => {
+    //     const { userName, recipientName } = data;
+
+    //     // Check if the user is already in a private room with the recipient
+    //     const existingRoom = findExistingPrivateRoom(userName, recipientName);
+    //     if (existingRoom) {
+    //       // Skip room creation if a room already exists
+    //       socket.emit('createdRoomPrivate', { privateRoomID: existingRoom, sender: userName, recipient: recipientName });
+    //       return;
+    //     }
+
+    //     const privateRoomID = generateRoomID();
+    //     const users = [userName, recipientName];
+    //     privateRooms.set(privateRoomID, users);
+
+
+    //     socket.join(privateRoomID);
+    //     socket.emit('createdRoomPrivate', { privateRoomID, sender: userName, recipient: recipientName });
+    //     socket.to(recipientName).emit('joinedRoomPrivate', { privateRoomID, sender: userName, recipient: recipientName });              
+
+    //   });
+
+    // ...
+
     socket.on('createRoomPrivate', (data) => {
-        console.log(' data.userName', data.userName)
-        console.log('data.recipientName', data.recipientName)
-        const privateRoomID = generateRoomID(); // Generate a unique room ID
-        const users = [data.userName, data.recipientName];
+        const { userName, recipientName } = data;
+        // Check if the user is already in a private room with the recipient
+        const existingRoom = findExistingPrivateRoom(userName, recipientName);
+        if (existingRoom) {
+            // Skip room creation if a room already exists
+            socket.emit('createdRoomPrivate', { privateRoomID: existingRoom, sender: userName, recipient: recipientName });
+            return;
+        }
 
-        // Store the room ID and users in the activeRooms map
-        privateRooms?.set(privateRoomID, users);
-        // Join the room
-        privateRoomID && socket.join(privateRoomID);
+        const privateRoomID = generateRoomID();
+        const PrivateUsers = [userName, recipientName];
+        privateRooms.set(privateRoomID, PrivateUsers);
 
-        // Emit the roomID to both users
-        socket.emit('createdRoomPrivate', { privateRoomID, sender: data.userName, recipient: data.recipientName });
+        socket.join(privateRoomID);
+        socket.emit('createdRoomPrivate', { privateRoomID, sender: userName, recipient: recipientName });
 
-        socket.to(privateRoomID).emit('joinedRoomPrivate', { privateRoomID, sender: data.userName, recipient: data.recipientName });
-        console.log('privateRoomID', privateRoomID)
+
+
+
+        // console.log('users......', users)
+        console.log('above hitttttttttt');
+        Object.entries(users).forEach(([key, value]) => {
+            // console.log('Key:', key, 'Value:', value);
+            // console.log('recipientName', recipientName)
+            if (value.includes(recipientName)) {
+                console.log('recepientName matched...', recipientName)
+
+                console.log('recipientId', key)
+                io.to(key).emit('joinedRoomPrivate', { privateRoomID, sender: userName, recipient: recipientName });
+                console.log('hitttttttttttttttttttt')
+                console.log('Key if:', key, 'Value:', value);
+                console.log({ privateRoomID, sender: userName, recipient: recipientName })
+            }
+
+        });
     });
+
+    // ...
+
 
 
 
     socket.on('send', message => {
-        // console.log('users........', users);
+        console.log('message........', message);
 
         const roomId = rooms.get(socket.id);
+        // console.log('roomId.......', roomId)
 
         const timestamp = new Date().toUTCString();
-        console.log('messageV1.......', message)
+        // console.log('messageV1.......', message)
         const recipientName = message.recipientName;
         // console.log(users[recipientName])
         // console.log('recipientName on send......', recipientName)
         if (recipientName != undefined) {
             // console.log('recipientName found!')
             let recipientId = ''
+            // console.log('users from send......', users)
+
             Object.entries(users).forEach(([key, value]) => {
                 // console.log('Key:', key, 'Value:', value);
                 if (value.includes(recipientName)) {
@@ -144,6 +187,40 @@ io.on("connection", (socket) => {
 });
 
 
+
+
+// let recipientId = ''
+// console.log('privateRoomID....', privateRoomID)
+// console.log('privateRooms....', privateRooms)
+//     Object.entries(privateRooms).forEach(([key, value]) => {
+//         // console.log('Key:', key, 'Value:', value);
+//         if (value.includes(privateRoomID)) {
+//             console.log('recepientName matched...', recipientName)
+//             recipientId = key
+//             socket.to(recipientId).emit('joinedRoomPrivate', { privateRoomID, sender: userName, recipient: recipientName });
+
+//         }
+//         else {
+//             console.log('recepientName not matched...', recipientName)
+//             // socket.to(roomId).emit('receive', { error: 'user is not register or login' });
+//         }
+//     });
+
+////////////////////////////////////////////////////////////////////////////////
+
+// for (const [id, names] of privateRooms.entries()) {
+//     if (id === privateRoomID) {
+//       console.log('Match found!');
+//       console.log('ID:', id);
+//       console.log('Names:', names);
+
+//       socket.to(id[recipientName]).emit('joinedRoomPrivate', { privateRoomID, sender: userName, recipient: recipientName });              
+//       console.log({ privateRoomID, sender: userName, recipient: recipientName })
+
+//       break; // Exit the loop if a match is found
+
+//     }
+//   }
 
 
 

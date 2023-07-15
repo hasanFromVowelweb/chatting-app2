@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback, useContext } from 'react'
 import '../assets/chat.css'
 import { Avatar, IconButton, Input } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
@@ -12,10 +12,12 @@ import ReactDOMServer from 'react-dom/server';
 import data from '@emoji-mart/data'
 import Picker from '@emoji-mart/react'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import DataContext from '../DataContext';
 
 
 
-export default function Chat({ setChatIconClicked, userName, ischatIconClicked, roomID, chatName, setPrivateNewMsg }) {
+export default function Chat({ setChatIconClicked, userName, ischatIconClicked, roomID, chatName, }) {
+  const { privateChatData, setPrivateChatData, setPrivateNewMsgRec, setPrivateNewMsg } = useContext(DataContext);
 
   const form = document.getElementById('send-container')
   const messageInput = document.getElementById('message-input')
@@ -37,6 +39,7 @@ export default function Chat({ setChatIconClicked, userName, ischatIconClicked, 
   var audio = new Audio('ting.mp3');
 
   const socket = io('http://localhost:3000');
+
 
 
   const someOnesOnline = (message) => {
@@ -82,6 +85,7 @@ export default function Chat({ setChatIconClicked, userName, ischatIconClicked, 
   }
 
   const sendChat = (message, name, time) => {
+    console.log('hitttt')
 
     const messageHtmlSend = `
     <p class="chat_message chat_receiver">
@@ -126,17 +130,28 @@ export default function Chat({ setChatIconClicked, userName, ischatIconClicked, 
 
     ///////////////////////////////////////////////////////
     socket.on('createdRoomPrivate', (data) => {
-      console.log('Room created with ID:', data);
       setPrivateNewMsg((prev) => {
-        return [...prev, data]
+        if (prev.some((item) => item.privateRoomID === data.privateRoomID)) {
+          return prev; // Skip adding the data if it already exists in the array
+        }
+        return [...prev, data]; // Add the new data object to the array
       });
+
       // Perform actions for the user who requested to create the room
     });
 
+
     socket.on('joinedRoomPrivate', (data) => {
-      console.log('Joined room with ID:', data);
+      console.log('Joined room with ID.......:', data);
+      setPrivateNewMsgRec((prev) => {
+        if (prev.some((item) => item.privateRoomID === data.privateRoomID)) {
+          return prev; // Skip adding the data if it already exists in the array
+        }
+        return [...prev, data]; // Add the new data object to the array
+      });
       // Perform actions for the other user who joined the room
     });
+
 
     socket.on('userLeftRoom', name => {
       console.log('name of the user who left a room', name)
@@ -144,9 +159,19 @@ export default function Chat({ setChatIconClicked, userName, ischatIconClicked, 
 
     })
 
+
+
+    return () => {
+      socket.disconnect();
+    };
+  }, [socket, userName, someOnesOnline, recievedChat, ischatIconClicked]);
+
+
+
+  useEffect(() => {
     state && socket.emit('createRoomPrivate', { userName, recipientName: privateChatInit?.recipientName })
 
-    ////////////////////////////////////////////////////////
+
     if (ischatIconClicked) {
       console.log('ischatIconClicked......', ischatIconClicked)
       const name = prompt(`Enter a recipient names from active recipients: ${recipientsActive}`);
@@ -162,9 +187,10 @@ export default function Chat({ setChatIconClicked, userName, ischatIconClicked, 
         setTimeout(() => {
           setState(false)
         }, 2000)
-        console.log(' if roomID from handleSubmit.....', roomID)
-        console.log('matched recipientName from handleSubmit....', recipientName)
-        console.log('userName who is creating a room', userName)
+
+        // console.log(' if roomID from handleSubmit.....', roomID)
+        // console.log('matched recipientName from handleSubmit....', recipientName)
+        // console.log('userName who is creating a room', userName)
       }
 
       else {
@@ -178,37 +204,7 @@ export default function Chat({ setChatIconClicked, userName, ischatIconClicked, 
       setChatIconClicked(false)
     }
 
-    return () => {
-      socket.disconnect();
-    };
-  }, [socket, userName, someOnesOnline, recievedChat, ischatIconClicked]);
-
-
-
-  // useEffect(() => {
-  //   console.log('ischatIconClicked', ischatIconClicked)
-  //   if (ischatIconClicked) {
-  //     const name = prompt(`Enter a recipient names from active recipients: ${recipientsActive}`);
-  //     const recipientName = name && name.trim(); // Trim whitespace from the entered ID
-  //     if (recipientsActive?.includes(recipientName)) {
-
-  //       socket.emit('createRoomPrivate', { userName, recipientName });
-
-  //       console.log(' if roomID from handleSubmit.....', roomID)
-  //       console.log('matched recipientName from handleSubmit....', recipientName)
-  //       console.log('userName who is creating a room', userName)
-  //     }
-  //     else {
-  //       alert('Recipient name not found!')
-  //     }
-  //     setChatIconClicked(false)
-
-  //   } else {
-  //     setChatIconClicked(false)
-  //   }
-
-  // }, [socket, ischatIconClicked])
-
+  }, [socket, ischatIconClicked])
 
 
   const handleSubmit = (e) => {
@@ -216,28 +212,27 @@ export default function Chat({ setChatIconClicked, userName, ischatIconClicked, 
     const message = messageInput.value;
     const timestamp = new Date().toUTCString();
 
-    if (roomID === 'chat1') {
-      const name = prompt(`Enter a recipient names from active recipients: ${recipientsActive}`);
-      const recipientName = name && name.trim(); // Trim whitespace from the entered ID
+    // if (roomID === 'chat1') {
+    //   const name = prompt(`Enter a recipient names from active recipients: ${recipientsActive}`);
+    //   const recipientName = name && name.trim(); // Trim whitespace from the entered ID
 
-      if (recipientsActive?.includes(recipientName)) {
-        console.log(' if roomID from handleSubmit.....', roomID)
-        console.log('matched recipientName from handleSubmit....', recipientName)
-        sendChat(message, 'You', timestamp);
+    //   if (recipientsActive?.includes(recipientName)) {
+    //     console.log(' if roomID from handleSubmit.....', roomID)
+    //     console.log('matched recipientName from handleSubmit....', recipientName)
+    //     sendChat(message, 'You', timestamp);
 
-        // Client-side code
-        socket.emit('send', { roomID, message, recipientName });
-      }
-      else {
-        alert('Recipient name not found!')
-      }
+    //     // Client-side code
+    //     socket.emit('send', { roomID, message, recipientName });
+    //   }
+    //   else {
+    //     alert('Recipient name not found!')
+    //   }
 
-    } else {
-      console.log(' else roomID from handleSubmit.....', roomID)
-
+    // } else {
+      console.log('roomID from handleSubmit.....', roomID)
       sendChat(message, 'You', timestamp);
       socket.emit('send', { roomID, message });
-    }
+    // }
     messageInput.value = '';
   };
 
